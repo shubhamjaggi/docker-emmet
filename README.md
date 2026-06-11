@@ -6,7 +6,7 @@
 **A Docker config linter and a Docker handbook in one project.**
 
 1. **The linter** — a Claude Code skill that audits Dockerfiles and `docker-compose` files for security vulnerabilities, correctness bugs, and production-readiness issues. 42 rules. A rationale and a concrete fix for every finding.
-2. **The [handbook](handbook/)** — 8 plain-language chapters explaining *why* each rule exists, from layer caching to container-escape vectors. Every finding the linter reports links straight to the chapter that explains it.
+2. **The [handbook](handbook/)** — 8 plain-language chapters explaining *why* each rule exists, from layer caching to container-escape vectors. Every finding the linter reports ends with a clickable link to the chapter (on GitHub) that explains it.
 
 Most linters tell you a rule was violated. This one tells you why it matters and hands you the chapter to go deep. It's a [Claude Code skill](https://code.claude.com/docs/en/skills): type `/docker-emmet` in any project — or just ask Claude to review your Docker setup and it loads automatically. A structured report in seconds, with no API keys, no network calls, and no dependencies beyond your existing Claude Code session.
 
@@ -19,20 +19,20 @@ Most linters tell you a rule was violated. This one tells you why it matters and
    Line ~18 · `- /var/run/docker.sock:/var/run/docker.sock`
    Gives this container unrestricted root access to the host Docker daemon.
    Fix: Remove the socket mount. Use Kaniko or docker:dind with TLS for CI builds.
-   📖 handbook/08-security.md
+   📖 https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/08-security.md
 
 ❌ DF-01 | ERROR — Secret in ARG or ENV
    Line ~6 · `ARG DATABASE_PASSWORD`
    If a build step writes this value to the filesystem, it is permanently recoverable
    from the image layer with a plain docker run ... cat.
    Fix: Remove from ARG/ENV. Inject at runtime via Docker secrets or _FILE convention.
-   📖 handbook/05-config-secrets.md
+   📖 https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/05-config-secrets.md
 
 ⚠️  DF-15 | WARN — Unpinned base image
    Line 1 · `FROM node:latest`
    latest is a mutable pointer — a rebuild can silently pull an incompatible version.
    Fix: FROM node:20.18.0-slim
-   📖 handbook/06-production.md
+   📖 https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/06-production.md
 
 ...
 
@@ -126,13 +126,13 @@ The report opens with a severity tally, then lists every finding grouped by file
    Line 8 · `ARG API_KEY`
    If a build step writes this to the filesystem, it's recoverable from the image layer forever.
    Fix: Remove from ARG/ENV; inject at runtime via Docker secrets (_FILE convention).
-   📖 handbook/05-config-secrets.md
+   📖 https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/05-config-secrets.md
 
 ⚠️  DF-04 | WARN — Shell-form CMD (PID 1 signal trap)
    Line 24 · `CMD npm start`
    sh becomes PID 1 and won't forward SIGTERM — shutdown drops in-flight requests after a 10s kill.
    Fix: Use exec form: CMD ["npm", "start"].
-   📖 handbook/01-dockerfile.md
+   📖 https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/01-dockerfile.md
 
    … more Dockerfile findings …
 
@@ -142,7 +142,7 @@ The report opens with a severity tally, then lists every finding grouped by file
    Line 29 · `restart: unless-stopped` (migrations)
    A migration exits 0; an auto-restart policy re-runs it in an endless loop.
    Fix: Set restart: "no" on one-shot jobs.
-   📖 handbook/03-compose.md
+   📖 https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/03-compose.md
 
    … more Compose findings …
 
@@ -241,7 +241,7 @@ The skill is a lean `SKILL.md` (the review procedure and output format) plus two
 3. **Loads** only the rule file(s) it needs — `rules/dockerfile.md` (24 rules) and/or `rules/compose.md` (18 rules) — and applies every rule, each with a precise trigger condition to minimise false positives
 4. **Outputs** findings grouped by file, ordered by severity (CRITICAL → ERROR → WARN → INFO), with rationale, a fix, and a `📖` link to the relevant handbook chapter
 
-All rule knowledge lives in the skill's own files — no network calls, no external dependencies, no configuration required. It pulls in only the rule set it needs (Dockerfile and/or Compose), and never loads the handbook into context (that would bloat every review); it just emits the chapter path for you to open afterward.
+All rule knowledge lives in the skill's own files — no network calls, no external dependencies, no configuration required. It pulls in only the rule set it needs (Dockerfile and/or Compose), and never loads the handbook into context (that would bloat every review); it just emits a clickable link to the chapter (on GitHub) for you to open afterward.
 
 ## Examples
 
