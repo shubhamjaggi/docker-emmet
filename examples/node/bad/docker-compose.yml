@@ -1,0 +1,31 @@
+# BAD Compose file — run `/docker-emmet examples/node/bad` to see every finding.
+
+services:
+  api:
+    build: .
+    ports: ["3000:3000"]
+    environment:
+      DATABASE_URL: postgres://app:supersecret@db:5432/appdb  # CM-04 secret hardcoded
+      API_KEY: sk_live_9f3a8b2c7d                              # CM-04 secret hardcoded
+    depends_on:
+      - db                                                     # CM-07 no service_healthy (db has a healthcheck)
+    # CM-10 no restart policy
+
+  db:
+    image: postgres                                            # CM-11 unpinned (no tag)
+    environment:
+      POSTGRES_PASSWORD: supersecret                           # CM-04 secret hardcoded
+    ports:
+      - "5432:5432"                                            # CM-15 database port exposed to host
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d appdb"]
+      interval: 5s
+      retries: 5
+    # CM-12 no named volume — data is lost on `docker compose down`
+
+  migrations:
+    build: .
+    command: python manage.py migrate
+    restart: unless-stopped                                    # CM-08 one-shot job set to auto-restart → loops forever
+    depends_on:
+      - db

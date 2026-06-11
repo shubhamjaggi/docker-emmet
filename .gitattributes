@@ -1,0 +1,6 @@
+# Normalize line endings to LF for all text files
+* text=auto eol=lf
+
+# Treat these as text explicitly (no extension)
+Dockerfile text eol=lf
+.dockerignore text eol=lf

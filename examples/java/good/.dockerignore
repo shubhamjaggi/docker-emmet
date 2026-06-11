@@ -1,0 +1,15 @@
+.git
+.gitignore
+target
+build
+.gradle
+*.class
+.env
+.env.*
+.DS_Store
+.idea
+*.iml
+.vscode
+Dockerfile*
+docker-compose*
+README*

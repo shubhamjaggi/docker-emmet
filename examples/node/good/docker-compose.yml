@@ -1,0 +1,61 @@
+# GOOD Compose file — `/docker-emmet examples/node/good` should report no issues.
+# Secrets via files, readiness-gated startup, pinned images, named volume, limits, and log rotation.
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt        # value lives outside the Compose file and git
+
+services:
+  api:
+    build: .
+    ports: ["3000:3000"]
+    environment:
+      DATABASE_URL: postgres://app@db:5432/appdb
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}   # interpolated; fails loudly if unset
+    depends_on:
+      db:
+        condition: service_healthy         # waits for pg_isready, not just container start
+      migrations:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { memory: 512M, cpus: "1.0" }
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  db:
+    image: postgres:16.4-alpine            # pinned to a patch version
+    secrets: [db_password]
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password   # _FILE convention — never an env value
+      POSTGRES_DB: appdb
+    volumes:
+      - pg_data:/var/lib/postgresql/data   # named volume — survives `docker compose down`
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d appdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { memory: 256M, cpus: "0.5" }
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    # no ports: — other services reach db:5432 on the internal Compose network
+
+  migrations:
+    build: .
+    command: npm run migrate
+    restart: "no"                          # one-shot job: exits 0, must not be restarted
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pg_data:
