@@ -1,0 +1,12 @@
+.git
+.gitignore
+target/
+*.class
+.env
+.env.*
+.idea
+.vscode
+.DS_Store
+Dockerfile*
+docker-compose*
+README*

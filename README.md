@@ -245,22 +245,24 @@ All rule knowledge lives in the skill's own files — no network calls, no exter
 
 ## Examples
 
-The `examples/` directory pairs an intentionally broken `bad/` config with a corrected `good/` config. Each line in the `bad/` files is annotated with the rule ID it triggers, and every `good/` config is written to produce **zero** findings — so it doubles as a copy-paste-ready starting point. **Across the five fixtures, all 42 rules are triggered at least once in a `bad/` file and resolved in its `good/` twin.**
+The `examples/` directory pairs an intentionally broken `bad/` config with a corrected `good/` config. Each line in the `bad/` files is annotated with the rule ID it triggers, and every `good/` config is written to produce **zero** findings — so it doubles as a copy-paste-ready starting point. **All 42 rules are triggered at least once in a `bad/` file and resolved in its `good/` twin** — see the [coverage matrix](examples/README.md).
 
 ```
 examples/
   node/     bad/{Dockerfile, docker-compose.yml}    good/{Dockerfile, docker-compose.yml, .dockerignore}
   python/   bad/Dockerfile                           good/{Dockerfile, .dockerignore}
-  java/     bad/Dockerfile                           good/{Dockerfile, .dockerignore}
+  java/     bad/{image-and-secrets, build-hygiene,   good/<same three>/{Dockerfile, .dockerignore}
+            runtime-and-health}/Dockerfile
   go/       bad/Dockerfile                           good/{Dockerfile, .dockerignore}
   insecure/ bad/{Dockerfile, docker-compose.yml}    good/{Dockerfile, docker-compose.yml, .dockerignore}
 ```
 
-Each fixture concentrates a slice of the rule set: `node` and `python`/`java` cover the everyday Dockerfile and Compose mistakes, `go` covers the build-hygiene and multi-stage rules (checksums, split `apt`, `CGO_ENABLED=0`, `ADD` vs `COPY`), and `insecure` is a deliberately-dangerous stack that concentrates the container-escape rules (socket mount, `privileged`, capabilities, host namespaces, seccomp).
+Where a single file can't show every rule without becoming contrived (e.g. "runs as root" and "missing `--chown` before a non-root user" are mutually exclusive), the case is split into a few **themed, realistic** Dockerfiles — `java/` is the worked example, with one image per concern (secrets/base, build hygiene, runtime wiring). Compose rules live in `node/` (everyday mistakes) and `insecure/` (a deliberately-dangerous stack: socket mount, `privileged`, capabilities, host namespaces, seccomp), since they're language-agnostic.
 
 Verify the skill against them:
 
 ```
+/docker-emmet examples/java/bad       # reports findings across all three Java scenarios
 /docker-emmet examples/insecure/bad   # surfaces every CRITICAL/security finding
 /docker-emmet examples/node/good      # should report: no issues found ✓
 ```

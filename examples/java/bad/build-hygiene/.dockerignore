@@ -1,15 +1,12 @@
 .git
 .gitignore
-target
-build
-.gradle
+target/
 *.class
 .env
 .env.*
-.DS_Store
 .idea
-*.iml
 .vscode
+.DS_Store
 Dockerfile*
 docker-compose*
 README*
