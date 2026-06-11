@@ -19,20 +19,20 @@ Most linters tell you a rule was violated. This one tells you why it matters and
    Line ~18 · `- /var/run/docker.sock:/var/run/docker.sock`
    Gives this container unrestricted root access to the host Docker daemon.
    Fix: Remove the socket mount. Use Kaniko or docker:dind with TLS for CI builds.
-   📖 https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/08-security.md
+   📖 [08-security](https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/08-security.md)
 
 ❌ DF-01 | ERROR — Secret in ARG or ENV
    Line ~6 · `ARG DATABASE_PASSWORD`
    If a build step writes this value to the filesystem, it is permanently recoverable
    from the image layer with a plain docker run ... cat.
    Fix: Remove from ARG/ENV. Inject at runtime via Docker secrets or _FILE convention.
-   📖 https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/05-config-secrets.md
+   📖 [05-config-secrets](https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/05-config-secrets.md)
 
 ⚠️  DF-15 | WARN — Unpinned base image
    Line 1 · `FROM node:latest`
    latest is a mutable pointer — a rebuild can silently pull an incompatible version.
    Fix: FROM node:20.18.0-slim
-   📖 https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/06-production.md
+   📖 [06-production](https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/06-production.md)
 
 ...
 
@@ -126,13 +126,13 @@ The report opens with a severity tally, then lists every finding grouped by file
    Line 8 · `ARG API_KEY`
    If a build step writes this to the filesystem, it's recoverable from the image layer forever.
    Fix: Remove from ARG/ENV; inject at runtime via Docker secrets (_FILE convention).
-   📖 https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/05-config-secrets.md
+   📖 [05-config-secrets](https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/05-config-secrets.md)
 
 ⚠️  DF-04 | WARN — Shell-form CMD (PID 1 signal trap)
    Line 24 · `CMD npm start`
    sh becomes PID 1 and won't forward SIGTERM — shutdown drops in-flight requests after a 10s kill.
    Fix: Use exec form: CMD ["npm", "start"].
-   📖 https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/01-dockerfile.md
+   📖 [01-dockerfile](https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/01-dockerfile.md)
 
    … more Dockerfile findings …
 
@@ -142,7 +142,7 @@ The report opens with a severity tally, then lists every finding grouped by file
    Line 29 · `restart: unless-stopped` (migrations)
    A migration exits 0; an auto-restart policy re-runs it in an endless loop.
    Fix: Set restart: "no" on one-shot jobs.
-   📖 https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/03-compose.md
+   📖 [03-compose](https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/03-compose.md)
 
    … more Compose findings …
 

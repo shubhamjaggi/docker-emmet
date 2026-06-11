@@ -43,7 +43,7 @@ For multi-stage Dockerfiles, track which `FROM` stage is which — some rules ap
 
 ## Handbook references
 
-Each rule has a deep-dive chapter in the published handbook. End every finding with a `📖` link to its chapter so the reader can open the full explanation in one click. Build the link from this base URL plus the chapter file (e.g. `📖 https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/05-config-secrets.md`):
+Each rule has a deep-dive chapter in the published handbook. End every finding with a `📖` **Markdown link** to its chapter, labelled with the chapter file so it renders clean and clickable — e.g. `📖 [05-config-secrets](https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/05-config-secrets.md)`. Build the URL from this base plus the chapter file:
 
 `https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/<chapter>.md`
 
@@ -80,24 +80,24 @@ For each file, print a heading then list findings sorted by severity (CRITICAL �
    The Docker socket gives this container unrestricted root access to the host daemon.
    It can create privileged containers, read secrets from other containers, and escape isolation entirely.
    Fix: Remove the socket mount. Use Kaniko, Buildah, or docker:dind with TLS for CI build needs.
-   📖 https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/08-security.md
+   📖 [08-security](https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/08-security.md)
 
 ❌ DF-01 | ERROR — Secret in ARG or ENV
    Line ~6 · `ARG DATABASE_PASSWORD`
    If any build step writes this value to the filesystem, it is permanently recoverable from the image layer.
    Fix: Remove from ARG/ENV. Inject at runtime via orchestrator env or Docker secrets (_FILE convention).
-   📖 https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/05-config-secrets.md
+   📖 [05-config-secrets](https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/05-config-secrets.md)
 
 ⚠️  DF-15 | WARN — Unpinned base image
    Line 1 · `FROM node:latest`
    latest is a mutable pointer — a rebuild can pull an incompatible major version silently.
    Fix: Pin to a specific tag: `FROM node:20.18.0-slim`
-   📖 https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/06-production.md
+   📖 [06-production](https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/06-production.md)
 
 ℹ️  DF-23 | INFO — No WORKDIR set
    Several COPY/RUN instructions but no WORKDIR — operations run from the filesystem root.
    Fix: Add `WORKDIR /app` near the top of the stage, before the first COPY or RUN.
-   📖 https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/01-dockerfile.md
+   📖 [01-dockerfile](https://github.com/shubhamjaggi/docker-emmet/blob/main/handbook/01-dockerfile.md)
 ```
 
 For a file with no findings: `### path/to/file — no issues found ✓`
