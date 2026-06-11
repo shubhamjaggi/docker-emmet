@@ -103,7 +103,7 @@ security_opt:
   - seccomp=./profiles/allow-ptrace.json
 ```
 
-Generate a custom profile by starting from Docker's [default profile](https://github.com/moby/moby/blob/master/profiles/seccomp/default.json) and adding only the syscalls your tool requires.
+Generate a custom profile by starting from Docker's [default seccomp profile](https://docs.docker.com/engine/security/seccomp/) and adding only the syscalls your tool requires.
 
 ---
 
