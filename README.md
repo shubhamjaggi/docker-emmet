@@ -46,7 +46,11 @@ Most linters tell you a rule was violated. This one tells you why it matters and
 
 ```
 docker-emmet/
-├─ .claude/skills/docker-emmet/SKILL.md   # the linter skill (creates /docker-emmet)
+├─ .claude/skills/docker-emmet/        # the linter skill (creates /docker-emmet)
+│   ├─ SKILL.md                        #   review procedure, output format, handbook map
+│   └─ rules/                          #   42 rule definitions, loaded on demand
+│       ├─ dockerfile.md               #     DF-01–24
+│       └─ compose.md                  #     CM-01–18
 ├─ handbook/                           # the companion handbook (8 chapters)
 │   ├─ 01-dockerfile.md                #   fundamentals, multi-stage, base images, build hygiene
 │   ├─ 02-local-dev.md                 #   hot-reload, override files, debugging
@@ -67,27 +71,32 @@ The linter and the handbook are kept in lockstep by [RULES.md](RULES.md): every 
 
 ## Installation
 
-Install the skill into your personal Claude Code skills directory — works in every project. (Clone the repo too if you want the handbook and examples locally.)
+The skill is a directory (`SKILL.md` plus its `rules/`), so install the whole folder into your personal Claude Code skills directory. The easiest way is to clone and symlink — then `git pull` keeps it current:
 
-**macOS / Linux**
-```bash
-mkdir -p ~/.claude/skills/docker-emmet
-curl -fsSL https://raw.githubusercontent.com/shubhamjaggi/docker-emmet/main/.claude/skills/docker-emmet/SKILL.md \
-  -o ~/.claude/skills/docker-emmet/SKILL.md
-```
-
-**Windows (PowerShell)**
-```powershell
-New-Item -ItemType Directory -Force "$env:USERPROFILE\.claude\skills\docker-emmet" | Out-Null
-Invoke-WebRequest `
-  -Uri "https://raw.githubusercontent.com/shubhamjaggi/docker-emmet/main/.claude/skills/docker-emmet/SKILL.md" `
-  -OutFile "$env:USERPROFILE\.claude\skills\docker-emmet\SKILL.md"
-```
-
-**Clone and symlink (for contributing)**
 ```bash
 git clone https://github.com/shubhamjaggi/docker-emmet
 ln -s "$(pwd)/docker-emmet/.claude/skills/docker-emmet" ~/.claude/skills/docker-emmet
+```
+
+**Or download the files directly**
+
+macOS / Linux:
+```bash
+mkdir -p ~/.claude/skills/docker-emmet/rules
+base=https://raw.githubusercontent.com/shubhamjaggi/docker-emmet/main/.claude/skills/docker-emmet
+curl -fsSL $base/SKILL.md            -o ~/.claude/skills/docker-emmet/SKILL.md
+curl -fsSL $base/rules/dockerfile.md -o ~/.claude/skills/docker-emmet/rules/dockerfile.md
+curl -fsSL $base/rules/compose.md    -o ~/.claude/skills/docker-emmet/rules/compose.md
+```
+
+Windows (PowerShell):
+```powershell
+$dir = "$env:USERPROFILE\.claude\skills\docker-emmet"
+New-Item -ItemType Directory -Force "$dir\rules" | Out-Null
+$base = "https://raw.githubusercontent.com/shubhamjaggi/docker-emmet/main/.claude/skills/docker-emmet"
+Invoke-WebRequest "$base/SKILL.md"            -OutFile "$dir\SKILL.md"
+Invoke-WebRequest "$base/rules/dockerfile.md" -OutFile "$dir\rules\dockerfile.md"
+Invoke-WebRequest "$base/rules/compose.md"    -OutFile "$dir\rules\compose.md"
 ```
 
 If the `~/.claude/skills/` directory didn't already exist, **restart Claude Code** (or start a new session) so it watches the new directory. Then run `/docker-emmet` — or just ask Claude to review your Docker files.
@@ -225,14 +234,14 @@ Then run the **good** twin to confirm a clean pass:
 
 ## How it works
 
-The skill is a single `SKILL.md` that Claude Code loads when you invoke `/docker-emmet` (or when it auto-activates on a Docker-related request). It instructs Claude to:
+The skill is a lean `SKILL.md` (the review procedure and output format) plus two bundled rule files it loads on demand. Claude Code loads `SKILL.md` when you invoke `/docker-emmet` (or when it auto-activates on a Docker-related request). It then:
 
-1. **Glob** for Docker-related files — nothing is read until files are confirmed to exist
-2. **Read** only the discovered files — no other project files are loaded into context
-3. **Apply** all 42 rules, each with a precise trigger condition to minimise false positives
-4. **Output** findings grouped by file, ordered by severity (CRITICAL → ERROR → WARN → INFO), with rationale, a fix, and a `📖` link to the relevant handbook chapter
+1. **Globs** for Docker-related files — nothing is read until files are confirmed to exist
+2. **Reads** only the discovered files — no other project files are loaded into context
+3. **Loads** only the rule file(s) it needs — `rules/dockerfile.md` (24 rules) and/or `rules/compose.md` (18 rules) — and applies every rule, each with a precise trigger condition to minimise false positives
+4. **Outputs** findings grouped by file, ordered by severity (CRITICAL → ERROR → WARN → INFO), with rationale, a fix, and a `📖` link to the relevant handbook chapter
 
-All rule knowledge is embedded in the skill file — no network calls, no external dependencies, no configuration required. The skill never loads the handbook into context (that would bloat every review); it just emits the chapter path for you to open afterward.
+All rule knowledge lives in the skill's own files — no network calls, no external dependencies, no configuration required. It pulls in only the rule set it needs (Dockerfile and/or Compose), and never loads the handbook into context (that would bloat every review); it just emits the chapter path for you to open afterward.
 
 ## Examples
 
