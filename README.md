@@ -60,7 +60,7 @@ docker-emmet/
 │   ├─ 06-production.md                #   non-root, limits, logging, registry, multi-platform
 │   ├─ 07-stacks.md                    #   full ready-to-adapt stack snippets
 │   └─ 08-security.md                  #   isolation model + the escape vectors the linter flags
-├─ examples/                           # bad/ + good/ fixtures for Node, Python, Java
+├─ examples/                           # bad/ + good/ fixtures — Node, Python, Java, Go, insecure stack
 ├─ .github/workflows/links.yml         # CI: checks every handbook/README link & anchor
 ├─ RULES.md                            # every rule → its handbook chapter
 ├─ LICENSE                             # MIT
@@ -245,20 +245,24 @@ All rule knowledge lives in the skill's own files — no network calls, no exter
 
 ## Examples
 
-The `examples/` directory pairs an intentionally broken `bad/` config with a corrected `good/` config for Node.js, Python, and Java. Each line in the `bad/` files is annotated with the rule ID it triggers, and every `good/` config is written to produce **zero** findings — so it doubles as a copy-paste-ready starting point.
+The `examples/` directory pairs an intentionally broken `bad/` config with a corrected `good/` config. Each line in the `bad/` files is annotated with the rule ID it triggers, and every `good/` config is written to produce **zero** findings — so it doubles as a copy-paste-ready starting point. **Across the five fixtures, all 42 rules are triggered at least once in a `bad/` file and resolved in its `good/` twin.**
 
 ```
 examples/
-  node/   bad/{Dockerfile, docker-compose.yml}   good/{Dockerfile, docker-compose.yml, .dockerignore}
-  python/ bad/Dockerfile                          good/{Dockerfile, .dockerignore}
-  java/   bad/Dockerfile                          good/{Dockerfile, .dockerignore}
+  node/     bad/{Dockerfile, docker-compose.yml}    good/{Dockerfile, docker-compose.yml, .dockerignore}
+  python/   bad/Dockerfile                           good/{Dockerfile, .dockerignore}
+  java/     bad/Dockerfile                           good/{Dockerfile, .dockerignore}
+  go/       bad/Dockerfile                           good/{Dockerfile, .dockerignore}
+  insecure/ bad/{Dockerfile, docker-compose.yml}    good/{Dockerfile, docker-compose.yml, .dockerignore}
 ```
+
+Each fixture concentrates a slice of the rule set: `node` and `python`/`java` cover the everyday Dockerfile and Compose mistakes, `go` covers the build-hygiene and multi-stage rules (checksums, split `apt`, `CGO_ENABLED=0`, `ADD` vs `COPY`), and `insecure` is a deliberately-dangerous stack that concentrates the container-escape rules (socket mount, `privileged`, capabilities, host namespaces, seccomp).
 
 Verify the skill against them:
 
 ```
-/docker-emmet examples/node/bad     # surfaces the full set of annotated findings
-/docker-emmet examples/node/good    # should report: no issues found ✓
+/docker-emmet examples/insecure/bad   # surfaces every CRITICAL/security finding
+/docker-emmet examples/node/good      # should report: no issues found ✓
 ```
 
 ## Severity levels

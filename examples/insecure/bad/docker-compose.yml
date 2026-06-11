@@ -1,0 +1,72 @@
+# BAD insecure stack — `/docker-emmet examples/insecure/bad` shows every security finding.
+# A deliberately broken reference: each line names the rule it triggers.
+version: "3.8"                                    # CM-16 obsolete version key (ignored by Compose V2)
+
+services:
+  proxy:
+    build: ./
+    ports: ["80:80"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock # CM-01 CRITICAL — full control of the host daemon
+    privileged: true                              # CM-02 CRITICAL — every capability, no isolation
+    cap_add:
+      - SYS_ADMIN                                 # CM-03 dangerous capability ("the new root")
+    security_opt:
+      - seccomp:unconfined                        # CM-06 syscall filter disabled
+    pid: host                                     # CM-05 shares the host PID namespace
+    links:
+      - app                                       # CM-17 deprecated — use networks instead
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { memory: 256M, cpus: "0.5" }
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  app:
+    build: ./
+    expose: ["3000"]
+    network_mode: host                            # CM-05 shares the host network stack
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { memory: 512M, cpus: "1.0" }
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  db:
+    image: postgres:16.4-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_DB: appdb
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}   # interpolated — not a hardcoded secret
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    # CM-09 no healthcheck on the database — nothing can gate on condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { memory: 256M, cpus: "0.5" }
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  cache:
+    image: redis:7.4-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 5
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { memory: 128M, cpus: "0.25" }
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+# CM-18 four services incl. a database, no top-level networks: block — all on one flat network
+volumes:
+  pg_data:
