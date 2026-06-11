@@ -1,6 +1,6 @@
 # Rule Catalog
 
-Every rule the [`/docker-emmet`](.claude/commands/docker-emmet.md) linter enforces, mapped to the [handbook](handbook/) chapter that explains it in depth. The linter tells you *what* and *where*; the chapter tells you *why*.
+Every rule the [`/docker-emmet`](.claude/skills/docker-emmet/SKILL.md) linter enforces, mapped to the [handbook](handbook/) chapter that explains it in depth. The linter tells you *what* and *where*; the chapter tells you *why*.
 
 Severities: 🔴 **CRITICAL** (container escape / security emergency) · ❌ **ERROR** (bug, data loss, or vulnerability) · ⚠️ **WARN** (fix before production) · ℹ️ **INFO** (improvement).
 

@@ -1,5 +1,6 @@
 ---
-description: Review Dockerfiles and docker-compose files for security vulnerabilities, correctness bugs, and production-readiness issues — 42 rules with rationale and fix for every finding
+name: docker-emmet
+description: Audits Dockerfiles and docker-compose files for security vulnerabilities, correctness bugs, and production-readiness issues (42 rules), reporting each finding with its rationale, a concrete fix, and a handbook reference. Use when reviewing, auditing, linting, or hardening a Dockerfile, Containerfile, or docker-compose / compose YAML file, or when the user asks to check a container build for secrets, image size, healthchecks, or misconfigurations.
 argument-hint: "[path]   (optional — defaults to the whole project)"
 allowed-tools: Glob, Read, Grep
 ---

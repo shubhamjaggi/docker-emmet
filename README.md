@@ -8,7 +8,7 @@
 1. **The linter** — a Claude Code skill that audits Dockerfiles and `docker-compose` files for security vulnerabilities, correctness bugs, and production-readiness issues. 42 rules. A rationale and a concrete fix for every finding.
 2. **The [handbook](handbook/)** — 8 plain-language chapters explaining *why* each rule exists, from layer caching to container-escape vectors. Every finding the linter reports links straight to the chapter that explains it.
 
-Most linters tell you a rule was violated. This one tells you why it matters and hands you the chapter to go deep. Type `/docker-emmet` in any project and get a structured report in seconds — no API keys, no network calls, no dependencies beyond your existing Claude Code session.
+Most linters tell you a rule was violated. This one tells you why it matters and hands you the chapter to go deep. It's a [Claude Code skill](https://code.claude.com/docs/en/skills): type `/docker-emmet` in any project — or just ask Claude to review your Docker setup and it loads automatically. A structured report in seconds, with no API keys, no network calls, and no dependencies beyond your existing Claude Code session.
 
 ```
 ## Docker Emmet — 2 critical · 3 errors · 4 warnings · 2 info
@@ -46,7 +46,7 @@ Most linters tell you a rule was violated. This one tells you why it matters and
 
 ```
 docker-emmet/
-├─ .claude/commands/docker-emmet.md   # the linter skill (the /docker-emmet command)
+├─ .claude/skills/docker-emmet/SKILL.md   # the linter skill (creates /docker-emmet)
 ├─ handbook/                           # the companion handbook (8 chapters)
 │   ├─ 01-dockerfile.md                #   fundamentals, multi-stage, base images, build hygiene
 │   ├─ 02-local-dev.md                 #   hot-reload, override files, debugging
@@ -67,28 +67,30 @@ The linter and the handbook are kept in lockstep by [RULES.md](RULES.md): every 
 
 ## Installation
 
-Copy the skill file to your Claude Code global commands directory — takes 30 seconds and works in every project instantly. (Clone the repo too if you want the handbook and examples locally.)
+Install the skill into your personal Claude Code skills directory — works in every project. (Clone the repo too if you want the handbook and examples locally.)
 
 **macOS / Linux**
 ```bash
-mkdir -p ~/.claude/commands
-curl -fsSL https://raw.githubusercontent.com/shubhamjaggi/docker-emmet/main/.claude/commands/docker-emmet.md \
-  -o ~/.claude/commands/docker-emmet.md
+mkdir -p ~/.claude/skills/docker-emmet
+curl -fsSL https://raw.githubusercontent.com/shubhamjaggi/docker-emmet/main/.claude/skills/docker-emmet/SKILL.md \
+  -o ~/.claude/skills/docker-emmet/SKILL.md
 ```
 
 **Windows (PowerShell)**
 ```powershell
-New-Item -ItemType Directory -Force "$env:USERPROFILE\.claude\commands" | Out-Null
+New-Item -ItemType Directory -Force "$env:USERPROFILE\.claude\skills\docker-emmet" | Out-Null
 Invoke-WebRequest `
-  -Uri "https://raw.githubusercontent.com/shubhamjaggi/docker-emmet/main/.claude/commands/docker-emmet.md" `
-  -OutFile "$env:USERPROFILE\.claude\commands\docker-emmet.md"
+  -Uri "https://raw.githubusercontent.com/shubhamjaggi/docker-emmet/main/.claude/skills/docker-emmet/SKILL.md" `
+  -OutFile "$env:USERPROFILE\.claude\skills\docker-emmet\SKILL.md"
 ```
 
 **Clone and symlink (for contributing)**
 ```bash
 git clone https://github.com/shubhamjaggi/docker-emmet
-ln -s "$(pwd)/docker-emmet/.claude/commands/docker-emmet.md" ~/.claude/commands/docker-emmet.md
+ln -s "$(pwd)/docker-emmet/.claude/skills/docker-emmet" ~/.claude/skills/docker-emmet
 ```
+
+If the `~/.claude/skills/` directory didn't already exist, **restart Claude Code** (or start a new session) so it watches the new directory. Then run `/docker-emmet` — or just ask Claude to review your Docker files.
 
 ## Usage
 
@@ -97,6 +99,8 @@ ln -s "$(pwd)/docker-emmet/.claude/commands/docker-emmet.md" ~/.claude/commands/
 /docker-emmet ./services/api     # audit a specific subdirectory (monorepos)
 /docker-emmet ./Dockerfile       # audit a single file
 ```
+
+Because it's a skill, Claude also loads it **automatically** when you ask it to review, audit, or harden a Dockerfile or compose file — no slash command required.
 
 ## Demo
 
@@ -221,7 +225,7 @@ Then run the **good** twin to confirm a clean pass:
 
 ## How it works
 
-The skill is a single Markdown file (`docker-emmet.md`) that Claude Code loads when you invoke `/docker-emmet`. It instructs Claude to:
+The skill is a single `SKILL.md` that Claude Code loads when you invoke `/docker-emmet` (or when it auto-activates on a Docker-related request). It instructs Claude to:
 
 1. **Glob** for Docker-related files — nothing is read until files are confirmed to exist
 2. **Read** only the discovered files — no other project files are loaded into context
