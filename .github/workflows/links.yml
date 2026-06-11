@@ -1,0 +1,41 @@
+name: links
+
+# Validates every Markdown link and internal #anchor across the repo, so the
+# linter↔handbook cross-references (RULES.md, the per-rule "Learn more" chapters)
+# can never silently rot as rules and chapters are added.
+
+on:
+  push:
+    paths:
+      - '**/*.md'
+      - '.github/workflows/links.yml'
+  pull_request:
+    paths:
+      - '**/*.md'
+  schedule:
+    - cron: '0 9 * * 1'   # Mondays 09:00 UTC — also catches external link rot
+
+permissions:
+  contents: read
+
+jobs:
+  linkcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check links and anchors
+        uses: lycheeverse/lychee-action@v2
+        with:
+          # --include-fragments verifies that file.md#anchor targets a real heading
+          # --exclude-loopback skips localhost URLs used in healthcheck examples
+          args: >-
+            --no-progress
+            --include-fragments
+            --exclude-loopback
+            --max-retries 3
+            './**/*.md'
+          fail: true
+        env:
+          # Authenticated GitHub requests avoid rate-limiting on github.com links
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

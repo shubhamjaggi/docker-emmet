@@ -1,5 +1,8 @@
 # docker-emmet
 
+[![links](https://github.com/shubhamjaggi/docker-emmet/actions/workflows/links.yml/badge.svg)](https://github.com/shubhamjaggi/docker-emmet/actions/workflows/links.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 **A Docker config linter and a Docker handbook in one project.**
 
 1. **The linter** — a Claude Code skill that audits Dockerfiles and `docker-compose` files for security vulnerabilities, correctness bugs, and production-readiness issues. 42 rules. A rationale and a concrete fix for every finding.
@@ -54,7 +57,9 @@ docker-emmet/
 │   ├─ 07-stacks.md                    #   full ready-to-adapt stack snippets
 │   └─ 08-security.md                  #   isolation model + the escape vectors the linter flags
 ├─ examples/                           # bad/ + good/ fixtures for Node, Python, Java
+├─ .github/workflows/links.yml         # CI: checks every handbook/README link & anchor
 ├─ RULES.md                            # every rule → its handbook chapter
+├─ LICENSE                             # MIT
 └─ README.md
 ```
 
@@ -92,6 +97,51 @@ ln -s "$(pwd)/docker-emmet/.claude/commands/docker-emmet.md" ~/.claude/commands/
 /docker-emmet ./services/api     # audit a specific subdirectory (monorepos)
 /docker-emmet ./Dockerfile       # audit a single file
 ```
+
+## Demo
+
+No project of your own needed — every rule ships with a fixture. In Claude Code, point the linter at the intentionally-broken Node fixture:
+
+> `/docker-emmet examples/node/bad`
+
+The report opens with a severity tally, then lists every finding grouped by file — each with a rationale, a fix, and a handbook link (abbreviated here):
+
+```text
+### examples/node/bad/Dockerfile
+
+❌ DF-01 | ERROR — Secret in ARG or ENV
+   Line 8 · `ARG API_KEY`
+   If a build step writes this to the filesystem, it's recoverable from the image layer forever.
+   Fix: Remove from ARG/ENV; inject at runtime via Docker secrets (_FILE convention).
+   📖 handbook/05-config-secrets.md
+
+⚠️  DF-04 | WARN — Shell-form CMD (PID 1 signal trap)
+   Line 24 · `CMD npm start`
+   sh becomes PID 1 and won't forward SIGTERM — shutdown drops in-flight requests after a 10s kill.
+   Fix: Use exec form: CMD ["npm", "start"].
+   📖 handbook/01-dockerfile.md
+
+   … more Dockerfile findings …
+
+### examples/node/bad/docker-compose.yml
+
+❌ CM-08 | ERROR — One-shot service set to auto-restart
+   Line 29 · `restart: unless-stopped` (migrations)
+   A migration exits 0; an auto-restart policy re-runs it in an endless loop.
+   Fix: Set restart: "no" on one-shot jobs.
+   📖 handbook/03-compose.md
+
+   … more Compose findings …
+
+## Fix priority
+1. [ERROR] docker-compose.yml · CM-08 — Set restart: "no" on the migrations service
+2. [ERROR] docker-compose.yml · CM-04 — Replace hardcoded passwords with Docker secrets / ${VAR:?}
+3. [ERROR] Dockerfile          · DF-01 — Remove API_KEY / DATABASE_PASSWORD from ARG/ENV
+```
+
+Then run the **good** twin to confirm a clean pass:
+
+> `/docker-emmet examples/node/good` → `no issues found ✓`
 
 ## Rules
 
