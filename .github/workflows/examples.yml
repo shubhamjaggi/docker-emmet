@@ -39,7 +39,13 @@ jobs:
           mapfile -t files < <(find examples -path '*/good/*' -name 'Dockerfile')
           echo "Linting ${#files[@]} good/ Dockerfiles:"
           printf '  %s\n' "${files[@]}"
-          hadolint --config .hadolint.yaml "${files[@]}"
+          # --ignore flags mirror .hadolint.yaml (CLI flags are always applied):
+          #   DL3008 — apt-get version pinning: impractical without a package lockfile
+          #   DL3047 — wget without progress-bar: used legitimately in HEALTHCHECK probes
+          hadolint \
+            --ignore DL3008 \
+            --ignore DL3047 \
+            "${files[@]}"
           echo "✅ All ${#files[@]} good/ Dockerfiles pass hadolint."
 
   validate-compose:

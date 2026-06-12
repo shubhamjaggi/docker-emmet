@@ -2,12 +2,5 @@
 # Only the rules below are suppressed; everything else is enforced.
 
 ignore:
-  # DL3008: "Pin versions in apt-get install" — pinning specific apt package versions
-  # (e.g. git=1:2.39.2-1.0+deb12u3) is impractical without a lockfile mechanism and
-  # would make the examples fragile and hard to maintain.  Base image pins + apt cache
-  # invalidation on image rebuild are the accepted mitigation.
   - DL3008
-
-  # DL3047: "Avoid use of wget without progress bar" — wget appears only in
-  # HEALTHCHECK probes where progress output would be noise, not in interactive RUN steps.
   - DL3047
