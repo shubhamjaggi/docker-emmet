@@ -1,0 +1,15 @@
+# typos configuration for docker-emmet.
+# Whitelists technical terms that typos might treat as misspellings.
+
+[default.extend-words]
+# Docker / Linux / container-security terminology used verbatim in the handbook.
+# Format: "as-written" = "correct-spelling" (same value = "this is intentional").
+seccomp   = "seccomp"    # kernel syscall-filtering subsystem
+distroless = "distroless" # Google's minimal container base images
+tmpfs     = "tmpfs"      # in-memory filesystem type
+nonroot   = "nonroot"    # distroless user name
+buildx    = "buildx"     # Docker BuildKit CLI plugin
+
+[files]
+# Skip intentionally-broken bad/ fixtures — typos in comments there are not bugs.
+extend-exclude = ["examples/*/bad", "examples/insecure/bad"]

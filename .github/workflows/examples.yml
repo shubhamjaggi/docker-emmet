@@ -1,0 +1,78 @@
+name: examples
+
+# Validates that every good/ Dockerfile passes hadolint (an independent linter) and
+# every good/ Compose file is spec-valid per `docker compose config`.
+# If this job fails, a "good" fixture is actually wrong — fix the example, not the workflow.
+
+on:
+  push:
+    paths:
+      - 'examples/**'
+      - '.hadolint.yaml'
+      - '.github/workflows/examples.yml'
+  pull_request:
+    paths:
+      - 'examples/**'
+      - '.hadolint.yaml'
+
+permissions:
+  contents: read
+
+jobs:
+  lint-dockerfiles:
+    name: hadolint — good/ Dockerfiles
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install hadolint
+        run: |
+          curl -fsSL \
+            https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64 \
+            -o /usr/local/bin/hadolint
+          chmod +x /usr/local/bin/hadolint
+          hadolint --version
+
+      - name: Lint good/ Dockerfiles
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(find examples -path '*/good/*' -name 'Dockerfile')
+          echo "Linting ${#files[@]} good/ Dockerfiles:"
+          printf '  %s\n' "${files[@]}"
+          hadolint --config .hadolint.yaml "${files[@]}"
+          echo "✅ All ${#files[@]} good/ Dockerfiles pass hadolint."
+
+  validate-compose:
+    name: docker compose config — good/ Compose files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate good/ Compose files
+        run: |
+          set -euo pipefail
+          failed=0
+
+          # Create stub secret files so Compose can resolve `file:` secret sources.
+          # These are only needed for config validation — they are never committed.
+          for secrets_dir in examples/node/good/secrets examples/insecure/good/secrets; do
+            mkdir -p "$secrets_dir"
+            echo "stub" > "$secrets_dir/db_password.txt"
+          done
+
+          while IFS= read -r f; do
+            dir="$(dirname "$f")"
+            printf 'Validating %s ... ' "$f"
+            if DB_PASSWORD=stub docker compose -f "$f" --project-directory "$dir" config -q; then
+              echo "ok"
+            else
+              echo "FAILED"
+              failed=$((failed + 1))
+            fi
+          done < <(find examples -path '*/good/docker-compose.yml')
+
+          if [ "$failed" -gt 0 ]; then
+            echo "❌ $failed Compose file(s) failed spec validation."
+            exit 1
+          fi
+          echo "✅ All good/ Compose files are spec-valid."

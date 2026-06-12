@@ -1,6 +1,9 @@
 # docker-emmet
 
 [![links](https://github.com/shubhamjaggi/docker-emmet/actions/workflows/links.yml/badge.svg)](https://github.com/shubhamjaggi/docker-emmet/actions/workflows/links.yml)
+[![rule-coverage](https://github.com/shubhamjaggi/docker-emmet/actions/workflows/coverage.yml/badge.svg)](https://github.com/shubhamjaggi/docker-emmet/actions/workflows/coverage.yml)
+[![examples](https://github.com/shubhamjaggi/docker-emmet/actions/workflows/examples.yml/badge.svg)](https://github.com/shubhamjaggi/docker-emmet/actions/workflows/examples.yml)
+[![spellcheck](https://github.com/shubhamjaggi/docker-emmet/actions/workflows/spellcheck.yml/badge.svg)](https://github.com/shubhamjaggi/docker-emmet/actions/workflows/spellcheck.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **A Docker config linter and a Docker handbook in one project.**
@@ -62,6 +65,11 @@ docker-emmet/
 │   └─ 08-security.md                  #   isolation model + the escape vectors the linter flags
 ├─ examples/                           # bad/ + good/ fixtures — Node, Python, Java, Go, insecure stack
 ├─ .github/workflows/links.yml         # CI: checks every handbook/README link & anchor
+├─ .github/workflows/coverage.yml      # CI: all 42 rule IDs present in bad/ fixtures
+├─ .github/workflows/examples.yml      # CI: hadolint on good/ Dockerfiles; compose config validate
+├─ .github/workflows/spellcheck.yml    # CI: typos spellcheck on handbook & docs
+├─ .hadolint.yaml                      # hadolint config (suppresses impractical apt-pin rule)
+├─ .typos.toml                         # typos config (whitelists Docker/Linux jargon)
 ├─ RULES.md                            # every rule → its handbook chapter
 ├─ LICENSE                             # MIT
 └─ README.md

@@ -1,0 +1,30 @@
+name: spellcheck
+
+# Checks spelling across the handbook, README, and RULES.md with `typos` — a fast,
+# low-false-positive spellchecker.  Configuration lives in .typos.toml.
+
+on:
+  push:
+    paths:
+      - '**/*.md'
+      - '.typos.toml'
+      - '.github/workflows/spellcheck.yml'
+  pull_request:
+    paths:
+      - '**/*.md'
+      - '.typos.toml'
+
+permissions:
+  contents: read
+
+jobs:
+  typos:
+    name: typos — handbook & docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check spelling
+        uses: crate-ci/typos-action@v1
+        with:
+          config: .typos.toml

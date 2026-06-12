@@ -1,0 +1,66 @@
+name: rule-coverage
+
+# Verifies that every one of the 42 rule IDs (DF-01–24, CM-01–18) appears in at
+# least one bad/ fixture annotation.  Prevents a rule from going silently untested
+# when examples are added, renamed, or restructured.
+
+on:
+  push:
+    paths:
+      - 'examples/**'
+      - '.claude/skills/docker-emmet/rules/**'
+      - '.github/workflows/coverage.yml'
+  pull_request:
+    paths:
+      - 'examples/**'
+      - '.claude/skills/docker-emmet/rules/**'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: All 42 rule IDs present in bad/ fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify rule coverage
+        run: |
+          set -euo pipefail
+          missing=()
+
+          # Only search the bad/ fixture directories — good/ and READMEs are excluded.
+          # Add a new language directory here if examples/rust/bad or similar is ever added.
+          BAD_DIRS=(
+            examples/node/bad
+            examples/python/bad
+            examples/java/bad
+            examples/go/bad
+            examples/insecure/bad
+          )
+
+          for n in $(seq -w 1 24); do
+            id="DF-${n}"
+            if ! grep -rq "$id" "${BAD_DIRS[@]}"; then
+              missing+=("$id")
+            fi
+          done
+
+          for n in $(seq -w 1 18); do
+            id="CM-${n}"
+            if ! grep -rq "$id" "${BAD_DIRS[@]}"; then
+              missing+=("$id")
+            fi
+          done
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "❌ Rule IDs with no bad/ fixture annotation:"
+            printf '  %s\n' "${missing[@]}"
+            echo ""
+            echo "Add a bad/ example file that triggers each missing rule, then annotate"
+            echo "the triggering line with its ID (e.g.  # DF-07 cache not cleaned)."
+            exit 1
+          fi
+
+          echo "✅ All 42 rule IDs appear in bad/ fixture annotations."
