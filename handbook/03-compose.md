@@ -1,5 +1,7 @@
 # Docker Compose — Core Scenarios, Dependencies & Healthchecks
 
+> **Linter rules explained in this chapter:** DF-16, DF-22, CM-07, CM-08, CM-09, CM-16, CM-17. Each is tagged inline at the section that covers it.
+
 Real apps are rarely one container — you've got your app *plus* a database, a cache, maybe a worker. **Compose** describes all of them in one `docker-compose.yml` and starts the whole set with `docker compose up`. Each entry under `services:` becomes a container. Two things Compose gives you for free:
 
 - **A shared network** — every service can reach the others using the *service name* as a hostname (the app connects to `db:5432`, not an IP). No manual networking needed.
@@ -138,7 +140,7 @@ docker compose --profile dev --profile tools up
 
 ---
 
-## Healthchecks
+## Healthchecks (DF-22)
 
 A **healthcheck** is a command Docker runs periodically inside the container to confirm the app is genuinely working — not just that the process started. A database process can be "up" for a second or two before it's actually ready to accept connections. Healthchecks turn "is the container running?" into "is the app *ready to serve*?", which is what `depends_on: condition: service_healthy` (below) waits on.
 
@@ -149,7 +151,7 @@ HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:3000/health || exit 1
 ```
 
-> The check command must exist *inside* the image. `curl` is **not** in `-slim`, scratch, or distroless bases (Alpine has only busybox `wget`), so a `curl` healthcheck on those silently fails forever. Pick a probe your base actually ships, or install one — see the gotcha note in [07-stacks.md](07-stacks.md).
+> The check command must exist *inside* the image. `curl` is **not** in `-slim`, scratch, or distroless bases (Alpine has only busybox `wget`), so a `curl` healthcheck on those silently fails forever (that mismatch is **DF-16**). Pick a probe your base actually ships, or install one — see the gotcha note in [07-stacks.md](07-stacks.md).
 
 ### In Compose (overrides Dockerfile)
 
@@ -171,7 +173,20 @@ What each field buys you, and why the defaults aren't enough:
 - **`retries`** — consecutive failures before the container flips to `unhealthy`. Set above 1 so a single transient blip (a GC pause, a brief lock) doesn't trigger a false alarm.
 - **`start_period`** — the crucial one for slow starters. During this initial window, failing checks **don't count** against `retries` — they just don't mark the container healthy yet. Without it, an app that takes 20s to warm up (JVM, large migrations) would burn through its retries and be declared `unhealthy` before it ever finished booting, and anything gated on `service_healthy` would give up. Size it to your real cold-start time.
 
-## `depends_on` conditions
+### Databases and caches especially need one (CM-09)
+
+A stateful service — Postgres, MySQL, Mongo, Redis — is the single most important place to define a healthcheck, for two reasons. First, it's what lets dependents use `condition: service_healthy` (next section) to wait for *genuine* readiness instead of racing a half-booted database. Second, the healthcheck is your only runtime signal that the datastore has degraded — a crash-looping Postgres or an out-of-memory Redis surfaces as `unhealthy` in `docker compose ps` and to any orchestrator, rather than silently accepting and then dropping connections. The standard probes:
+
+```yaml
+# Postgres
+test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]
+# Redis
+test: ["CMD", "redis-cli", "ping"]
+# MySQL / MariaDB
+test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+```
+
+## `depends_on` conditions (CM-07)
 
 `depends_on` controls **start order**. By default it only waits for the dependency's container to *start* — which often isn't enough, because "started" ≠ "ready." Pair it with a healthcheck and `service_healthy` to wait for genuine readiness and avoid the classic "app crashes on boot because the database wasn't accepting connections yet" race.
 
@@ -195,7 +210,7 @@ depends_on:
     condition: service_completed_successfully   # waits for a one-shot job to finish 0-exit
 ```
 
-## One-shot migration container
+## One-shot migration container (CM-08)
 
 Database migrations should run **once**, to completion, *before* the app starts — not on every app replica. Model the migration as its own service that runs and exits, then gate the app on `service_completed_successfully` so it only boots after migrations finish cleanly.
 
@@ -226,7 +241,7 @@ Why `restart: "no"` is essential here: a migration container is *meant* to exit 
 
 A few small things that quietly date a Compose file or undercut its isolation.
 
-### Drop the obsolete `version:` key
+### Drop the obsolete `version:` key (CM-16)
 
 ```yaml
 version: "3.8"     # ❌ delete this line
@@ -236,7 +251,7 @@ services:
 
 The top-level `version:` mattered in the old Compose V1 (the Python tool). In **Compose V2** — the Go rewrite that's been the default since Docker Compose v2.0 — it is **silently ignored**: it does not gate features, validate a schema, or change behaviour. Its only effect today is to mislead readers into thinking they must bump it to use newer syntax (they don't). Remove it.
 
-### Don't use `links:` — services already have DNS
+### Don't use `links:` — services already have DNS (CM-17)
 
 ```yaml
 app:
@@ -244,4 +259,4 @@ app:
     - db
 ```
 
-`links:` predates Docker networking. It injected connection details as environment variables and `/etc/hosts` entries, creating tight coupling and leaking the linked service's env. Modern Compose puts every service on a shared network with **automatic service-name DNS** — `app` can already reach `db:5432` with no `links:` at all. For start ordering, use `depends_on:` (above). For *who can reach whom*, segment with networks — see [04-volumes-networking.md](04-volumes-networking.md#custom-network-isolate-groups-of-services).
+`links:` predates Docker networking. It injected connection details as environment variables and `/etc/hosts` entries, creating tight coupling and leaking the linked service's env. Modern Compose puts every service on a shared network with **automatic service-name DNS** — `app` can already reach `db:5432` with no `links:` at all. For start ordering, use `depends_on:` (above). For *who can reach whom*, segment with networks — see [04-volumes-networking.md](04-volumes-networking.md#custom-networks-isolating-groups-of-services-cm-18).

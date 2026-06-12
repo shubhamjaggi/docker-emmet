@@ -1,5 +1,7 @@
 # Container Security & Isolation
 
+> **Linter rules explained in this chapter:** DF-03, DF-05, CM-01, CM-02, CM-03, CM-05, CM-06 (plus the build-time side of DF-01). Each is tagged inline at the section that covers it.
+
 A container is **not** a virtual machine. Every container on a host shares that host's single Linux kernel — isolation is enforced by kernel features (namespaces, cgroups, capabilities, seccomp, LSMs like AppArmor/SELinux), not by a hardware boundary. That has one blunt consequence: **anything that weakens those kernel features moves you from "isolated process" toward "process running on the host."** This chapter covers the misconfigurations that erase that boundary — the ones [`/docker-emmet`](../README.md) flags as `CRITICAL` and `ERROR` — and how to harden against them.
 
 The positive, day-to-day hardening controls (non-root user, read-only filesystem, resource limits, restart policy) live in [06-production.md](06-production.md). This chapter is about the **dangerous anti-patterns** and the runtime security model underneath them.
@@ -114,7 +116,7 @@ Namespaces are *how* containers get their private view of processes, the network
 - **`pid: host`** — the container sees and can signal **every process on the host**, including other containers and privileged daemons. `ps aux` inside the container now lists the whole machine; `kill` reaches host processes.
 - **`network_mode: host`** — the container uses the host's network stack directly. No network namespace, no Compose service-name DNS, and any port it binds is immediately live on the host's external interfaces with **no NAT and no `ports:` allow-list** in between.
 
-Both have legitimate niche uses (a host-level monitoring agent; a high-throughput or WebRTC app with many dynamic ports). Both should be deliberate, documented, and absent from ordinary application services. For the networking trade-offs in depth, see [04-volumes-networking.md](04-volumes-networking.md#host-networking-linux-only).
+Both have legitimate niche uses (a host-level monitoring agent; a high-throughput or WebRTC app with many dynamic ports). Both should be deliberate, documented, and absent from ordinary application services. For the networking trade-offs in depth, see [04-volumes-networking.md](04-volumes-networking.md#host-networking-linux-only-cm-05).
 
 ---
 

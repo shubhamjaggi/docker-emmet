@@ -1,5 +1,7 @@
 # Volumes & Networking
 
+> **Linter rules explained in this chapter:** CM-12, CM-15, CM-18 (and the networking side of CM-05). Each is tagged inline at the section that covers it.
+
 ## Volumes
 
 Containers are **ephemeral**: anything written inside one disappears when it's removed. That's fine for the app itself, but disastrous for a database. **Volumes** are storage that lives *outside* the container's lifecycle, so data persists across restarts, rebuilds, and `docker compose down`. There are a few kinds, suited to different jobs:
@@ -11,7 +13,7 @@ Containers are **ephemeral**: anything written inside one disappears when it's r
 | **Anonymous volume** | Docker-managed, no name | Shielding a container path from a bind mount |
 | **tmpfs** | RAM (never touches disk) | Secrets, scratch files you *want* gone |
 
-### Named volume (managed by Docker, persists across `down`)
+### Named volume — managed by Docker, persists across `down` (CM-12)
 
 ```yaml
 volumes:
@@ -80,7 +82,32 @@ All services in a Compose file share one network that Compose creates automatica
 
 > Worth knowing precisely: this auto-created network is a **user-defined bridge**, and that's exactly why name resolution works — Docker runs an embedded DNS server on user-defined networks. Docker's *other* bridge, the legacy `docker0` "default bridge" you land on with a plain `docker run` and no network flag, does **not** provide name-based DNS; there you'd have to use `--link` or raw IPs. So "containers find each other by name" is a property of user-defined networks (which Compose always gives you), not of bridge networking in general.
 
-### Custom network (isolate groups of services)
+### Publishing ports vs. internal-only — keep databases off the host (CM-15)
+
+There are two ways a service's port can be reachable, and the difference is a security boundary:
+
+- **`ports: ["5432:5432"]`** *publishes* the container port to the **host's network interface**. Anyone who can reach the host — another machine on the LAN, or the whole internet if the host has a public IP and an open firewall — can now hit that port directly. There's no NAT allow-list or Compose-network boundary in front of it.
+- **`expose: ["5432"]`** (or simply omitting both) keeps the port reachable **only from other containers on the same Compose network**. Services already find each other by service name there — the app dials `db:5432` — with no published port at all.
+
+So publishing a database or cache port is almost always a mistake: your app reaches `db:5432` over the internal network regardless, and the only thing a `ports:` mapping adds is exposure. A `postgres` or `redis` container with `ports:` on a cloud VM is one firewall slip away from being an open datastore on the internet — and these images often ship with weak or well-known default credentials.
+
+```yaml
+db:
+  image: postgres:16-alpine
+  # ❌ ports: ["5432:5432"]   # reachable from the host network — and maybe the internet
+  # ✅ no ports: at all — the app still reaches db:5432 on the Compose network
+```
+
+**If you need local GUI access** (psql, TablePlus, RedisInsight) while developing, don't put the mapping in the committed Compose file that also gets deployed. Add it in `docker-compose.override.yml` — which Compose loads automatically and which you keep gitignored — so the port is published on your laptop but never in production:
+
+```yaml
+# docker-compose.override.yml  (gitignored, local only)
+services:
+  db:
+    ports: ["5432:5432"]
+```
+
+### Custom networks: isolating groups of services (CM-18)
 
 ```yaml
 networks:
@@ -141,7 +168,7 @@ services:
 
 Start `compose A` first (so the network exists), then `compose B`. The `networks: [shared]` line on each service is essential — declaring the network at the top level alone doesn't attach anything to it.
 
-### Host networking (Linux only)
+### Host networking, Linux only (CM-05)
 
 ```yaml
 services:

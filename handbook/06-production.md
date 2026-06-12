@@ -1,10 +1,12 @@
 # Production Hardening, Registry & Multi-Platform Builds
 
+> **Linter rules explained in this chapter:** DF-02, DF-15, CM-03, CM-10, CM-11, CM-13, CM-14. Each is tagged inline at the section that covers it.
+
 ## Production Hardening
 
 The theme of this section is **least privilege**: give the container only what it needs, so that if your app is ever compromised, the blast radius is small. Each setting below closes off one avenue an attacker could otherwise use.
 
-### Non-root user
+### Non-root user (DF-02)
 
 By default a container runs as `root`. If an attacker breaks out of your app, they're root inside the container — and a container root that escapes is root-adjacent on the host. Running as an unprivileged user is the single highest-value hardening step.
 
@@ -53,7 +55,7 @@ services:
       - /tmp         # app can still write temp files
 ```
 
-### Resource limits
+### Resource limits (CM-13)
 
 Caps on CPU and memory prevent one container from starving the rest of the host — whether from a memory leak, a runaway loop, or a denial-of-service attack. Without limits, a single bad container can take down everything on the machine.
 
@@ -71,7 +73,7 @@ services:
 
 > `deploy.resources` works with `docker compose up` — no Swarm required.
 
-### Drop Linux capabilities
+### Drop Linux capabilities (CM-03)
 
 Linux splits root's powers into ~40 fine-grained "capabilities" (mount filesystems, change ownership, etc.). Containers get a broad default set, but a typical web app needs none of them. Drop `ALL` and add back only the rare one you actually use (e.g. `NET_BIND_SERVICE` to bind a port below 1024).
 
@@ -95,7 +97,7 @@ services:
       - no-new-privileges:true
 ```
 
-### Restart policy
+### Restart policy (CM-10)
 
 Tells Docker what to do when a container exits. `unless-stopped` restarts it on crash or host reboot, but respects a manual stop — a sensible default for long-running services. Use `on-failure` for jobs that should only retry on error, and `no` for one-shot tasks.
 
@@ -105,9 +107,9 @@ services:
     restart: unless-stopped    # or: always | on-failure | no
 ```
 
-> Prefer `unless-stopped` over `always`: both survive crashes and reboots, but `always` also restarts a container you deliberately `docker compose stop`, making it awkward to take a service offline. And always set `restart: "no"` *explicitly* on migrations/seeders — see the one-shot trap in [03-compose.md](03-compose.md#one-shot-migration-container).
+> Prefer `unless-stopped` over `always`: both survive crashes and reboots, but `always` also restarts a container you deliberately `docker compose stop`, making it awkward to take a service offline. And always set `restart: "no"` *explicitly* on migrations/seeders — see the one-shot trap in [03-compose.md](03-compose.md#one-shot-migration-container-cm-08).
 
-### Log rotation
+### Log rotation (CM-14)
 
 Docker's default logging driver is `json-file` with **no size limit**. A chatty service — one log line per request, query, or heartbeat — will grow that file until it fills the host disk, at which point *every* container on the machine fails because the daemon can't write. The failure is silent right up until it happens. Cap it:
 
@@ -129,7 +131,7 @@ In real production, point the driver at a centralised sink instead (`awslogs`, `
 
 A **registry** is the warehouse for your images (Docker Hub, GitHub Container Registry, AWS ECR, etc.). You `push` an image after building so that other machines, teammates, and your deployment pipeline can `pull` the exact same artifact. The `name:tag` you push *is* the image's identity, so tagging discipline matters.
 
-### Tag conventions
+### Tag conventions (DF-15, CM-11)
 
 A **tag** is the label after the colon (`app:1.2.3`). The trap to avoid: `latest` is just a default name, not a guarantee — it silently moves to whatever was pushed last. For anything you deploy, prefer an **immutable** tag (a semver release or a git-SHA) so a given tag always means the exact same image. That makes rollbacks and "what's actually running?" answerable.
 

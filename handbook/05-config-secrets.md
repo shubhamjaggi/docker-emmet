@@ -1,5 +1,7 @@
 # Config & Secrets
 
+> **Linter rules explained in this chapter:** DF-01, CM-04. Each is tagged inline at the section that covers it.
+
 The golden rule: **keep configuration out of your image.** The same image should run in dev, staging, and prod, with only the injected config differing. That means no hardcoded URLs, hostnames, or — especially — passwords baked into the Dockerfile. This file covers how to feed config in from outside, and how to handle the sensitive bits safely.
 
 ## .env file (default, auto-loaded by Compose)
@@ -22,7 +24,7 @@ services:
 
 **Never commit `.env`.** Commit `.env.example` instead.
 
-## Build-time ARG vs runtime ENV
+## Build-time ARG vs runtime ENV (DF-01)
 
 These two are easy to confuse. `ARG` exists **only while the image is being built** and is gone afterward — use it for build-time choices like a version number or base-image tag. `ENV` is **baked into the image and visible to the running container** — use it for runtime configuration.
 
@@ -57,6 +59,33 @@ docker run --rm myapp:latest cat /app/config.json
 ```
 
 That's why real secrets must be injected at *runtime* (env from the orchestrator, or the file-based secrets below) and never appear in any build instruction.
+
+## Hardcoded secrets in the Compose file (CM-04)
+
+The same rule applies one level up, in `docker-compose.yml`. A literal secret in an `environment:` block is exposed through several channels at once:
+
+```yaml
+services:
+  db:
+    environment:
+      POSTGRES_PASSWORD: supersecret      # ❌ hardcoded — leaks four ways
+```
+
+- **Version control** — the Compose file is committed, so the password is now in your git history (and every clone and fork) permanently, even if you later delete the line.
+- **`docker inspect`** — anyone who can run `docker inspect <container>` reads it straight back from the `Config.Env` array; no special access required.
+- **Logs & child processes** — environment variables are inherited by every child process and are routinely captured by log and crash aggregators.
+
+The fix is the same toolkit covered here — **interpolation** for ordinary values, or **file-based secrets** for the truly sensitive ones:
+
+```yaml
+services:
+  db:
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?must be set}   # ✅ from the shell / a gitignored .env
+      # …or, better still, the _FILE convention with Docker secrets (below)
+```
+
+A leaked Compose file should never equal leaked credentials.
 
 ## Docker secrets (Swarm / Compose v2.x)
 

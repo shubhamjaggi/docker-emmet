@@ -1,12 +1,14 @@
 # Dockerfile Fundamentals, Multi-Stage Builds & Base Images
 
+> **Linter rules explained in this chapter:** DF-04, DF-06–DF-14, DF-17–DF-21, DF-23, DF-24. Each is tagged inline at the section that covers it.
+
 A **Dockerfile** is a plain-text recipe. Each line is an instruction that Docker runs top-to-bottom to assemble an image. The single most important thing to understand is **layer caching**:
 
 > Every instruction creates a **layer** (a cached snapshot of the filesystem at that point). When you rebuild, Docker reuses a layer as long as that instruction *and everything above it* is unchanged. The moment one layer changes, every layer below it is rebuilt from scratch.
 
 This is why you'll see dependency files (`package.json`, `requirements.txt`, `pom.xml`) copied and installed **before** the application source: dependencies change rarely, source changes constantly. Put the slow, stable steps high up so they stay cached, and the fast, churny steps low down.
 
-**Example — installing dependencies before vs. after copying source:**
+**Example — installing dependencies before vs. after copying source (DF-06):**
 
 ```dockerfile
 # ❌ Bad: source copied before install
@@ -61,7 +63,7 @@ Instruction-by-instruction:
 - **`FROM`** — the starting point: a pre-built image you build on top of. Everything else is layered onto this.
 - **`WORKDIR`** — sets the "current directory" inside the image. Created if it doesn't exist; all later `COPY`/`RUN` paths are relative to it.
 - **`COPY <src> <dst>`** — copies files from your project (the *build context*) into the image. Copy dependency manifests *before* source so the install step stays cached (see the caching note above).
-- **`RUN`** — executes a command *at build time* and bakes the result into a layer (e.g. installing packages). Contrast with `CMD`, which runs at *container start*. Here it's `npm ci --omit=dev`, and both flags are deliberate: `ci` (vs `install`) installs the *exact* versions pinned in `package-lock.json` and errors if the lockfile is out of sync — so the image is reproducible instead of silently drifting to newer patch versions on each build. `--omit=dev` skips devDependencies (test runners, linters, type definitions) because they have no business in a production runtime — leaving them in bloats the image and adds vulnerabilities for code you'll never run.
+- **`RUN`** — executes a command *at build time* and bakes the result into a layer (e.g. installing packages). Contrast with `CMD`, which runs at *container start*. Here it's `npm ci --omit=dev`, and both flags are deliberate: `ci` (vs `install`) installs the *exact* versions pinned in `package-lock.json` and errors if the lockfile is out of sync — so the image is reproducible instead of silently drifting to newer patch versions on each build (using `install` here is **DF-17**). `--omit=dev` skips devDependencies (test runners, linters, type definitions) because they have no business in a production runtime — leaving them in bloats the image and adds vulnerabilities for code you'll never run (shipping them is **DF-19**, covered under Multi-Stage Builds below).
 - **`ENV`** — sets an environment variable that persists into the running container.
 - **`EXPOSE`** — pure documentation of which port the app listens on. It does **not** actually publish the port — you still need `-p 3000:3000` or Compose `ports:` to reach it from the host. Example: an image with `EXPOSE 3000` but run as `docker run myapp` is *unreachable* from your browser; run it as `docker run -p 3000:3000 myapp` and `localhost:3000` works. The `EXPOSE` line changed nothing — the `-p` flag did the real work.
 - **`ENTRYPOINT` / `CMD`** — define what runs when the container starts (see table below).
@@ -75,7 +77,7 @@ Instruction-by-instruction:
 
 Rule of thumb: use `ENTRYPOINT` for the thing that *always* runs (your binary), and `CMD` for the *default arguments* you might want to swap. Together they read as "always run X, with these default args unless overridden."
 
-## .dockerignore
+## .dockerignore (DF-11)
 
 ```
 node_modules/
@@ -147,7 +149,7 @@ EXPOSE 3000
 CMD ["node", "dist/server.js"]
 ```
 
-> Note the runtime does a fresh `npm ci --omit=dev` rather than copying `node_modules` from the builder. The builder's `node_modules` contains devDependencies (the TypeScript compiler, test tooling) needed to *build*; copying it wholesale would drag all of that into the shipped image. Installing prod-only deps in the final stage keeps it lean.
+> **(DF-19)** Note the runtime does a fresh `npm ci --omit=dev` rather than copying `node_modules` from the builder. The builder's `node_modules` contains devDependencies (the TypeScript compiler, test tooling) needed to *build*; copying it wholesale would drag all of that into the shipped image. Installing prod-only deps in the final stage keeps it lean.
 
 ### Python
 
@@ -184,7 +186,7 @@ ENTRYPOINT ["/server"]
 
 Every flag here earns its place:
 
-- **`CGO_ENABLED=0`** — disables cgo so Go links nothing against the system C library. The result is a *fully static* binary that depends on no `.so` files, which is the only reason it can run on `scratch` or `distroless/static` (those images have no libc to link against). Leave cgo on and the binary would crash on startup looking for `libc.so` that isn't there.
+- **`CGO_ENABLED=0`** (DF-20) — disables cgo so Go links nothing against the system C library. The result is a *fully static* binary that depends on no `.so` files, which is the only reason it can run on `scratch` or `distroless/static` (those images have no libc to link against). Leave cgo on and the binary would crash on startup looking for `libc.so` that isn't there.
 - **`GOOS=linux GOARCH=amd64`** — pins the target OS/architecture so a build on a Mac or Windows machine still produces a Linux/x86 binary the container can run. Without it you'd get a binary for *your* laptop, which won't execute inside the image.
 - **`-ldflags="-s -w"`** — strips the symbol table (`-s`) and DWARF debug info (`-w`) from the binary, shrinking it by ~25–30%. You give up `gdb`-style debugging of the production binary, which you wouldn't do in a container anyway.
 - **`distroless/static:nonroot` + `USER nonroot`** — pairs the smallest possible base with a built-in unprivileged user, so the container is both tiny *and* not running as root (see [06-production.md](06-production.md) for why that matters).
@@ -352,7 +354,7 @@ docker build --target runtime -t myapp:prod .
 
 ---
 
-## Base Image Choices
+## Base Image Choices (DF-13)
 
 The base image (the `FROM` line) is a tradeoff between **size/security** and **convenience/debuggability**. Smaller images pull faster, cost less to store, and expose fewer vulnerabilities — but strip away tools you might want when something breaks. Key terms:
 
@@ -445,4 +447,23 @@ When you copy files in and then drop to a non-root `USER`, files arrive owned by
 ```dockerfile
 COPY --chown=app:app . .
 USER app
+```
+
+### Set a WORKDIR (DF-23)
+
+Without a `WORKDIR`, every `RUN`, `COPY`, and `ADD` operates from `/` — the filesystem root. `COPY . .` then dumps your source straight into `/`, mixed in with `/bin`, `/etc`, and `/lib`; relative paths in your commands become ambiguous; and you're one stray `rm -rf ./build` away from deleting a system directory. `WORKDIR /app` is just `mkdir -p /app && cd /app`, applied to every later instruction in the stage — set it once near the top, before the first `COPY` or `RUN`.
+
+```dockerfile
+WORKDIR /app          # creates /app and makes it the cwd for everything below
+COPY . .              # lands in /app, not /
+```
+
+### Ship a JRE, not a JDK, at runtime (DF-14)
+
+The JDK is the *build* toolchain — `javac`, `jshell`, debug agents, source files. To *run* a compiled `.jar` you only need a JRE. Leaving a full JDK in the final stage adds ~150–250 MB and hands anyone who gains code execution a compiler and a box of tools inside your container. Build with a `-jdk-` image, ship on a `-jre-` one (the multi-stage Java examples above do exactly this):
+
+```dockerfile
+FROM eclipse-temurin:21-jdk-alpine AS builder   # compile here
+# ...build the jar...
+FROM eclipse-temurin:21-jre-alpine AS runtime    # ship this — JRE only
 ```
