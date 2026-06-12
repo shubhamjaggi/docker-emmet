@@ -1,13 +1,10 @@
 .git
 .gitignore
-node_modules
-npm-debug.log
-dist
-coverage
+*.test
+bin/
+vendor/
 .env
 .env.*
-*.test.*
-*.spec.*
 .DS_Store
 .idea
 .vscode

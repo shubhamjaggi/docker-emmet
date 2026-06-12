@@ -249,22 +249,20 @@ The `examples/` directory pairs an intentionally broken `bad/` config with a cor
 
 ```
 examples/
-  node/     bad/{Dockerfile, docker-compose.yml}    good/{Dockerfile, docker-compose.yml, .dockerignore}
-  python/   bad/Dockerfile                           good/{Dockerfile, .dockerignore}
-  java/     bad/{image-and-secrets, build-hygiene,   good/<same three>/{Dockerfile, .dockerignore}
-            runtime-and-health}/Dockerfile
-  go/       bad/Dockerfile                           good/{Dockerfile, .dockerignore}
-  insecure/ bad/{Dockerfile, docker-compose.yml}    good/{Dockerfile, docker-compose.yml, .dockerignore}
+  node/ python/ java/ go/   bad/{image-and-secrets, build-hygiene, runtime-and-health}/Dockerfile
+                            good/<same three>/{Dockerfile, .dockerignore}
+  node/                     + bad/docker-compose.yml  good/docker-compose.yml
+  insecure/                 bad/{Dockerfile, docker-compose.yml}  good/{…, .dockerignore}
 ```
 
-Where a single file can't show every rule without becoming contrived (e.g. "runs as root" and "missing `--chown` before a non-root user" are mutually exclusive), the case is split into a few **themed, realistic** Dockerfiles — `java/` is the worked example, with one image per concern (secrets/base, build hygiene, runtime wiring). Compose rules live in `node/` (everyday mistakes) and `insecure/` (a deliberately-dangerous stack: socket mount, `privileged`, capabilities, host namespaces, seccomp), since they're language-agnostic.
+Each language is split into three **themed, realistic** Dockerfiles rather than one contrived "kitchen-sink" file — necessary because some rules are mutually exclusive in a single file (e.g. "runs as root" vs "missing `--chown` before a non-root user"; "no healthcheck" vs "healthcheck calls a missing binary"). The three themes — `image-and-secrets`, `build-hygiene`, `runtime-and-health` — together cover every rule that applies to that stack. Compose rules live in `node/` (everyday mistakes) and `insecure/` (a deliberately-dangerous stack: socket mount, `privileged`, capabilities, host namespaces, seccomp), since they're language-agnostic. The full rule→fixture map is the [coverage matrix](examples/README.md).
 
 Verify the skill against them:
 
 ```
-/docker-emmet examples/java/bad       # reports findings across all three Java scenarios
+/docker-emmet examples/go/bad         # reports findings across all three Go scenarios
 /docker-emmet examples/insecure/bad   # surfaces every CRITICAL/security finding
-/docker-emmet examples/node/good      # should report: no issues found ✓
+/docker-emmet examples/java/good      # should report: no issues found ✓
 ```
 
 ## Severity levels
