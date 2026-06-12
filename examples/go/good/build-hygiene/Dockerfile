@@ -12,7 +12,8 @@ RUN curl -fsSL https://example.com/migrate-v1.tar.gz -o m.tar.gz \
  && tar -xzf m.tar.gz
 COPY go.mod go.sum ./
 RUN go mod download
-COPY config ./config                       # COPY, not ADD
+# COPY, not ADD — explicit, no surprise tar-extraction
+COPY config ./config
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /server ./cmd/server
 

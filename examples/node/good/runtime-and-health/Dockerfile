@@ -12,7 +12,8 @@ WORKDIR /app
 RUN addgroup --system app && adduser --system --ingroup app app
 COPY --chown=app:app package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force         # no devDependencies in the runtime image
-COPY --from=builder --chown=app:app /app/dist ./dist     # owned by the runtime user
+# owned by the runtime user
+COPY --from=builder --chown=app:app /app/dist ./dist
 USER app
 EXPOSE 3000
 # Node's built-in fetch — no curl/wget needed on slim

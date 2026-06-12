@@ -11,7 +11,8 @@ RUN mvn package -DskipTests -q
 FROM eclipse-temurin:21-jre-jammy AS runtime
 WORKDIR /app
 RUN groupadd --system app && useradd --system --gid app app
-COPY --from=builder --chown=app:app /app/target/*.jar app.jar   # owned by the runtime user
+# owned by the runtime user
+COPY --from=builder --chown=app:app /app/target/*.jar app.jar
 USER app
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \

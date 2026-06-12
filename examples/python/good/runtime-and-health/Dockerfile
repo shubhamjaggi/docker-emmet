@@ -9,7 +9,8 @@ COPY . .
 FROM python:3.12-slim AS runtime
 WORKDIR /app
 RUN addgroup --system app && adduser --system --ingroup app app
-COPY --from=builder --chown=app:app /app ./    # owned by the runtime user
+# owned by the runtime user
+COPY --from=builder --chown=app:app /app ./
 USER app
 EXPOSE 8000
 # python's urllib — no curl needed on slim

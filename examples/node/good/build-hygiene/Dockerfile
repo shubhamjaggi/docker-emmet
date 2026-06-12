@@ -12,7 +12,8 @@ RUN curl -fsSL https://example.com/tool.tar.gz -o tool.tar.gz \
  && tar -xzf tool.tar.gz
 COPY package*.json ./
 RUN npm ci
-COPY assets ./assets                       # COPY, not ADD — explicit, no surprise tar-extraction
+# COPY, not ADD — explicit, no surprise tar-extraction
+COPY assets ./assets
 COPY . .
 RUN npm run build
 

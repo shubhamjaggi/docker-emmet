@@ -11,7 +11,8 @@ RUN curl -fsSL https://example.com/tool.tar.gz -o tool.tar.gz \
  && tar -xzf tool.tar.gz
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
-COPY assets ./assets                       # COPY, not ADD
+# COPY, not ADD — explicit, no surprise tar-extraction
+COPY assets ./assets
 COPY . .
 
 FROM python:3.12-slim AS runtime

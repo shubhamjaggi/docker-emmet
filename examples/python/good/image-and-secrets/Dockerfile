@@ -4,12 +4,14 @@ FROM python:3.12.7-slim AS base
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
-COPY requirements.txt .                    # manifest first → install layer stays cached
+# manifest first → install layer stays cached
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 FROM base AS runtime
 RUN addgroup --system app && adduser --system --ingroup app app
-COPY --chown=app:app . .                   # owned by the runtime user — no permission errors
+# owned by the runtime user — no permission errors at startup
+COPY --chown=app:app . .
 USER app
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \

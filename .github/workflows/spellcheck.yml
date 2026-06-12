@@ -24,7 +24,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install typos
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download \
+            --repo crate-ci/typos \
+            --pattern '*x86_64-unknown-linux-musl.tar.gz' \
+            --output typos.tar.gz \
+            --clobber
+          tar -xzf typos.tar.gz ./typos
+          sudo mv typos /usr/local/bin/
+          typos --version
+
       - name: Check spelling
-        uses: crate-ci/typos-action@v1
-        with:
-          config: .typos.toml
+        run: typos --config .typos.toml

@@ -10,7 +10,8 @@ COPY probe.sha256 ./
 RUN curl -fsSL https://example.com/grpc_health_probe -o /usr/local/bin/probe \
  && sha256sum -c probe.sha256 \
  && chmod +x /usr/local/bin/probe
-COPY config ./config                       # COPY, not ADD — explicit, no surprise tar-extraction
+# COPY, not ADD — explicit, no surprise tar-extraction
+COPY config ./config
 COPY pom.xml ./
 RUN mvn dependency:go-offline -q
 COPY src ./src

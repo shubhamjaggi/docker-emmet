@@ -9,7 +9,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /server ./cmd/server
 
 FROM gcr.io/distroless/static-debian12:nonroot AS runtime
 WORKDIR /app
-COPY --from=builder --chown=nonroot:nonroot /server /server   # owned by the runtime user
+# owned by the runtime user
+COPY --from=builder --chown=nonroot:nonroot /server /server
 USER nonroot
 EXPOSE 8080
 # The binary implements a health subcommand — no shell or wget needed on distroless

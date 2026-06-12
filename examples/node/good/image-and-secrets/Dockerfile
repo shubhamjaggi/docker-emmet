@@ -3,7 +3,8 @@
 
 FROM node:20.18-slim AS builder
 WORKDIR /app
-COPY package*.json ./                     # manifest first → install layer stays cached
+# manifest first → install layer stays cached
+COPY package*.json ./
 RUN npm ci                                # clean, reproducible install (incl. devDeps for the build)
 COPY . .
 RUN npm run build
@@ -18,5 +19,6 @@ USER app
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD node -e "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
-CMD ["node", "dist/server.js"]            # exec form — node is PID 1 and receives SIGTERM
+# exec form — node is PID 1 and receives SIGTERM
+CMD ["node", "dist/server.js"]
 # DATABASE_PASSWORD injected at runtime, never baked into the image
