@@ -12,13 +12,18 @@ This is why you'll see dependency files (`package.json`, `requirements.txt`, `po
 
 ```dockerfile
 # ❌ Bad: source copied before install
-COPY . .                 # changes on every edit → cache busts here
-RUN npm ci               # ...so deps reinstall every build (~40s)
+# changes on every edit → cache busts here
+COPY . .
+# ...so deps reinstall every build (~40s)
+RUN npm ci
 
 # ✅ Good: deps installed before source
-COPY package*.json ./    # changes only when deps change
-RUN npm ci               # cached until package.json changes (~0s on rebuild)
-COPY . .                 # only this cheap layer rebuilds on a code edit
+# changes only when deps change
+COPY package*.json ./
+# cached until package.json changes (~0s on rebuild)
+RUN npm ci
+# only this cheap layer rebuilds on a code edit
+COPY . .
 ```
 
 Now picture editing one line in `src/server.js` and rebuilding:
@@ -40,21 +45,30 @@ A one-character change costs 40 seconds in the bad ordering and ~1 second in the
 ```dockerfile
 # syntax=docker/dockerfile:1
 
-FROM node:20-slim                        # base image
+# base image
+FROM node:20-slim
 
-WORKDIR /app                             # all subsequent paths are relative to this
+# all subsequent paths are relative to this
+WORKDIR /app
 
-COPY package*.json ./                    # copy dependency manifests first (cache layer)
-RUN npm ci --omit=dev                    # install deps in a separate layer
+# copy dependency manifests first (cache layer)
+COPY package*.json ./
+# install deps in a separate layer
+RUN npm ci --omit=dev
 
-COPY . .                                 # copy source after deps (avoids reinstall on src change)
+# copy source after deps (avoids reinstall on src change)
+COPY . .
 
-ENV NODE_ENV=production                  # baked-in env var
+# baked-in env var
+ENV NODE_ENV=production
 
-EXPOSE 3000                              # documentation only — does not publish the port
+# documentation only — does not publish the port
+EXPOSE 3000
 
-ENTRYPOINT ["node"]                      # fixed executable
-CMD ["server.js"]                        # default argument (overridable at runtime)
+# fixed executable
+ENTRYPOINT ["node"]
+# default argument (overridable at runtime)
+CMD ["server.js"]
 ```
 
 Instruction-by-instruction:
@@ -137,13 +151,15 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
-RUN npm run build          # outputs to /app/dist
+# outputs to /app/dist
+RUN npm run build
 
 # --- Stage 2: runtime ---
 FROM node:20-slim AS runtime
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --omit=dev          # reinstall PROD deps only — devDependencies built the app but must not ship
+# reinstall PROD deps only — devDependencies built the app but must not ship
+RUN npm ci --omit=dev
 COPY --from=builder /app/dist ./dist
 EXPOSE 3000
 CMD ["node", "dist/server.js"]
@@ -201,7 +217,8 @@ FROM eclipse-temurin:21-jdk-alpine AS builder
 WORKDIR /app
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
-RUN ./mvnw dependency:go-offline -q          # cache deps layer
+# cache deps layer
+RUN ./mvnw dependency:go-offline -q
 COPY src ./src
 RUN ./mvnw package -DskipTests -q
 
@@ -264,7 +281,8 @@ FROM eclipse-temurin:21-jdk-alpine AS builder
 WORKDIR /app
 COPY gradlew build.gradle.kts settings.gradle.kts ./
 COPY gradle/ gradle/
-RUN ./gradlew dependencies -q              # cache deps
+# cache deps
+RUN ./gradlew dependencies -q
 COPY src ./src
 RUN ./gradlew bootJar -x test -q
 
@@ -299,7 +317,8 @@ COPY gradlew build.gradle.kts settings.gradle.kts ./
 COPY gradle/ gradle/
 RUN ./gradlew dependencies -q
 COPY src ./src
-RUN ./gradlew bootJar -x test -q           # same as Java — Kotlin compiles to .jar
+# same as Java — Kotlin compiles to .jar
+RUN ./gradlew bootJar -x test -q
 
 FROM eclipse-temurin:21-jdk-alpine AS layers
 WORKDIR /app
@@ -332,9 +351,11 @@ COPY gradlew build.gradle.kts settings.gradle.kts ./
 COPY gradle/ gradle/
 RUN ./gradlew dependencies -q
 COPY src ./src
-RUN ./gradlew nativeCompile -x test -q      # Spring Boot: nativeCompile task
+# Spring Boot: nativeCompile task
+RUN ./gradlew nativeCompile -x test -q
 
-FROM debian:12-slim AS runtime             # distroless/base also works
+# distroless/base also works
+FROM debian:12-slim AS runtime
 WORKDIR /app
 RUN addgroup --system app && adduser --system --ingroup app app
 COPY --from=builder --chown=app:app /app/build/native/nativeCompile/myapp /app/myapp
@@ -389,8 +410,10 @@ The rules above make images small and fast to rebuild. These make them *correct*
 ### Exec form vs shell form — the PID 1 signal trap (DF-04)
 
 ```dockerfile
-CMD node server.js              # ❌ shell form
-CMD ["node", "server.js"]       # ✅ exec form
+# ❌ shell form — sh is PID 1, signals not forwarded
+CMD node server.js
+# ✅ exec form — node is PID 1 and receives signals directly
+CMD ["node", "server.js"]
 ```
 
 Shell form runs your command as `/bin/sh -c "node server.js"`, which makes **`sh` the PID 1** of the container, with `node` as its child. When Docker stops the container it sends `SIGTERM` to PID 1 — and the default `sh` does **not** forward signals to its children. So `node` never hears the shutdown, never drains connections or flushes writes, and is `SIGKILL`ed after the stop timeout (10s by default). The symptom is deploys that always take ten seconds and drop in-flight requests.
@@ -411,9 +434,12 @@ If a stage has **two `CMD`s** (or two `ENTRYPOINT`s), Docker silently uses only 
 
 ```dockerfile
 # ❌ three separate problems
-RUN apt-get update                       # cached independently → goes stale
-RUN apt-get install -y curl              # may install against weeks-old package lists
-RUN apt-get install -y jq                # second layer, second cache
+# cached independently → goes stale
+RUN apt-get update
+# may install against weeks-old package lists
+RUN apt-get install -y curl
+# second layer, second cache
+RUN apt-get install -y jq
 
 # ✅ one atomic, recommends-free, cleaned-up layer
 RUN apt-get update \
@@ -454,8 +480,10 @@ USER app
 Without a `WORKDIR`, every `RUN`, `COPY`, and `ADD` operates from `/` — the filesystem root. `COPY . .` then dumps your source straight into `/`, mixed in with `/bin`, `/etc`, and `/lib`; relative paths in your commands become ambiguous; and you're one stray `rm -rf ./build` away from deleting a system directory. `WORKDIR /app` is just `mkdir -p /app && cd /app`, applied to every later instruction in the stage — set it once near the top, before the first `COPY` or `RUN`.
 
 ```dockerfile
-WORKDIR /app          # creates /app and makes it the cwd for everything below
-COPY . .              # lands in /app, not /
+# creates /app and makes it the cwd for everything below
+WORKDIR /app
+# lands in /app, not /
+COPY . .
 ```
 
 ### Ship a JRE, not a JDK, at runtime (DF-14)
@@ -463,7 +491,9 @@ COPY . .              # lands in /app, not /
 The JDK is the *build* toolchain — `javac`, `jshell`, debug agents, source files. To *run* a compiled `.jar` you only need a JRE. Leaving a full JDK in the final stage adds ~150–250 MB and hands anyone who gains code execution a compiler and a box of tools inside your container. Build with a `-jdk-` image, ship on a `-jre-` one (the multi-stage Java examples above do exactly this):
 
 ```dockerfile
-FROM eclipse-temurin:21-jdk-alpine AS builder   # compile here
+# compile here
+FROM eclipse-temurin:21-jdk-alpine AS builder
 # ...build the jar...
-FROM eclipse-temurin:21-jre-alpine AS runtime    # ship this — JRE only
+# ship this — JRE only
+FROM eclipse-temurin:21-jre-alpine AS runtime
 ```

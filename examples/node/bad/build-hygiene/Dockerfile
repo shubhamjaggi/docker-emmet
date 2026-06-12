@@ -3,12 +3,17 @@
 
 FROM node:20.18-slim AS builder
 # DF-23 no WORKDIR in either stage — everything runs from /
-ADD ./assets /build/assets                       # DF-12 ADD for a local copy — use COPY
-RUN apt-get update                               # DF-08 update split from install
-RUN apt-get install -y git                       # DF-07 cache not cleaned · DF-09 no --no-install-recommends · DF-10 first install
-RUN apt-get install -y python3                    # DF-07 · DF-09 · DF-10 second separate install — merge them
+# DF-12 ADD for a local copy — use COPY
+ADD ./assets /build/assets
+# DF-08 update split from install
+RUN apt-get update
+# DF-07 cache not cleaned · DF-09 no --no-install-recommends · DF-10 first install
+RUN apt-get install -y git
+# DF-07 · DF-09 · DF-10 second separate install — merge them
+RUN apt-get install -y python3
+# DF-03 sudo in container · DF-05 download with no checksum
 RUN sudo curl -fsSL https://example.com/tool.tar.gz -o tool.tar.gz \
-    && tar -xzf tool.tar.gz                       # DF-03 sudo in container · DF-05 download with no checksum
+    && tar -xzf tool.tar.gz
 COPY package*.json ./
 RUN npm ci
 COPY . .

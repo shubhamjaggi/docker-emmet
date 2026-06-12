@@ -5,7 +5,8 @@ FROM node:20.18-slim AS builder
 WORKDIR /app
 # manifest first → install layer stays cached
 COPY package*.json ./
-RUN npm ci                                # clean, reproducible install (incl. devDeps for the build)
+# clean, reproducible install (incl. devDeps for the build)
+RUN npm ci
 COPY . .
 RUN npm run build
 
@@ -13,7 +14,8 @@ FROM node:20.18-slim AS runtime
 WORKDIR /app
 RUN addgroup --system app && adduser --system --ingroup app app
 COPY --chown=app:app package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force         # production dependencies only
+# production dependencies only
+RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=builder --chown=app:app /app/dist ./dist
 USER app
 EXPOSE 3000

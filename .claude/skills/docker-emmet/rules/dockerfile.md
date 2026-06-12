@@ -55,7 +55,8 @@ Trigger: A `COPY . .` or `COPY <source-dir>/ <dest>/` instruction that appears *
 Rationale: Docker rebuilds every layer from the first changed one downward. Copying all source first means any single changed `.ts`, `.py`, or `.go` file forces a complete dependency reinstall — turning a 2-second incremental build into a 2-minute one. The dependency graph rarely changes between source edits; the source changes constantly.
 Fix: Copy only the dependency manifest files first, run the install (this layer is now cached until the manifest changes), then copy source:
 ```dockerfile
-COPY package*.json ./      # or requirements.txt, go.mod go.sum, pom.xml, Gemfile
+# or requirements.txt, go.mod go.sum, pom.xml, Gemfile
+COPY package*.json ./
 RUN npm ci
 COPY . .
 ```
@@ -184,7 +185,8 @@ Fix: In the final stage, install production dependencies fresh:
 FROM node:20-slim AS runtime
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force   # prod-only install
+# prod-only install
+RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=builder --chown=app:app /app/dist ./dist
 ```
 

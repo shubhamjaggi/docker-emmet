@@ -11,7 +11,8 @@ FROM node:20.18-slim AS runtime
 WORKDIR /app
 RUN addgroup --system app && adduser --system --ingroup app app
 COPY --chown=app:app package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force         # no devDependencies in the runtime image
+# no devDependencies in the runtime image
+RUN npm ci --omit=dev && npm cache clean --force
 # owned by the runtime user
 COPY --from=builder --chown=app:app /app/dist ./dist
 USER app

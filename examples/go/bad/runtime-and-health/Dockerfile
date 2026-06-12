@@ -8,10 +8,13 @@ COPY . .
 RUN CGO_ENABLED=0 go build -o /server ./cmd/server
 
 FROM gcr.io/distroless/base-debian12 AS runtime
-COPY --from=builder /server /server              # DF-21 COPY without --chown before a non-root USER
+# DF-21 COPY without --chown before a non-root USER
+COPY --from=builder /server /server
 USER nonroot
 EXPOSE 8080
 # distroless has no shell or wget → DF-16 fires on this wget healthcheck
 HEALTHCHECK CMD wget -qO- http://localhost:8080/health || exit 1
-CMD ["/server"]                                  # DF-24 with the next line — two CMD
-CMD ["/server", "--verbose"]                     # DF-24 only the last CMD runs
+# DF-24 first CMD — silently ignored because a second CMD follows
+CMD ["/server"]
+# DF-24 second CMD — only this one runs
+CMD ["/server", "--verbose"]

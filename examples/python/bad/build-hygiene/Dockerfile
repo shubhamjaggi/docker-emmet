@@ -2,12 +2,17 @@
 
 FROM python:3.12-slim AS builder
 # DF-23 no WORKDIR in either stage — everything runs from /
-ADD ./assets /build/assets                       # DF-12 ADD for a local copy — use COPY
-RUN apt-get update                               # DF-08 update split from install
-RUN apt-get install -y gcc                       # DF-07 cache not cleaned · DF-09 no --no-install-recommends · DF-10 first install
-RUN apt-get install -y libpq-dev                  # DF-07 · DF-09 · DF-10 second separate install
+# DF-12 ADD for a local copy — use COPY
+ADD ./assets /build/assets
+# DF-08 update split from install
+RUN apt-get update
+# DF-07 cache not cleaned · DF-09 no --no-install-recommends · DF-10 first install
+RUN apt-get install -y gcc
+# DF-07 · DF-09 · DF-10 second separate install
+RUN apt-get install -y libpq-dev
+# DF-03 sudo in container · DF-05 download with no checksum
 RUN sudo curl -fsSL https://example.com/tool.tar.gz -o tool.tar.gz \
-    && tar -xzf tool.tar.gz                       # DF-03 sudo in container · DF-05 download with no checksum
+    && tar -xzf tool.tar.gz
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .

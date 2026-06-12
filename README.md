@@ -128,7 +128,7 @@ No project of your own needed — every rule ships with a fixture. In Claude Cod
 The report opens with a severity tally, then lists every finding grouped by file — each with a rationale, a fix, and a handbook link (abbreviated here):
 
 ```text
-### examples/node/bad/Dockerfile
+### examples/node/bad/image-and-secrets/Dockerfile
 
 ❌ DF-01 | ERROR — Secret in ARG or ENV
    Line 8 · `ARG API_KEY`

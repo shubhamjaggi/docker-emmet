@@ -4,15 +4,18 @@
 FROM node:20.18-slim AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci                                 # devDependencies are needed to build…
+# devDependencies are needed to build…
+RUN npm ci
 COPY . .
 RUN npm run build
 
 FROM node:20.18-slim AS runtime
 WORKDIR /app
 RUN addgroup --system app && adduser --system --ingroup app app
-COPY --from=builder /app/node_modules ./node_modules   # DF-19 ships ALL deps incl. devDeps · DF-21 no --chown
-COPY --from=builder /app/dist ./dist                   # DF-21 COPY without --chown before USER app
+# DF-19 ships ALL deps incl. devDeps · DF-21 no --chown
+COPY --from=builder /app/node_modules ./node_modules
+# DF-21 COPY without --chown before USER app
+COPY --from=builder /app/dist ./dist
 USER app
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \

@@ -19,7 +19,8 @@ FROM node:20-slim AS runtime
 WORKDIR /app
 RUN addgroup --system app && adduser --system --ingroup app app
 COPY package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force   # prod-only deps — devDependencies stay out of the shipped image
+# prod-only deps — devDependencies stay out of the shipped image
+RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=builder --chown=app:app /app/dist ./dist
 USER app
 EXPOSE 3000

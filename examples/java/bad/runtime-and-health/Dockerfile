@@ -11,9 +11,12 @@ RUN mvn package -DskipTests -q
 FROM eclipse-temurin:21-jre-jammy AS runtime
 WORKDIR /app
 RUN groupadd --system app && useradd --system --gid app app
-COPY --from=builder /app/target/*.jar app.jar    # DF-21 COPY without --chown before a non-root USER → unwritable as `app`
+# DF-21 COPY without --chown before a non-root USER → unwritable as `app`
+COPY --from=builder /app/target/*.jar app.jar
 USER app
 EXPOSE 8080
 # DF-22 long-running server but no HEALTHCHECK anywhere in the file
-CMD java -jar app.jar                             # DF-04 shell form — sh becomes PID 1, SIGTERM never reaches the JVM
-CMD ["java", "-jar", "app.jar", "--debug"]        # DF-24 second CMD — only this one runs, the first is ignored
+# DF-04 shell form — sh becomes PID 1, SIGTERM never reaches the JVM
+CMD java -jar app.jar
+# DF-24 second CMD — only this one runs, the shell-form CMD above is silently ignored
+CMD ["java", "-jar", "app.jar", "--debug"]

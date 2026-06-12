@@ -29,10 +29,12 @@ services:
 These two are easy to confuse. `ARG` exists **only while the image is being built** and is gone afterward — use it for build-time choices like a version number or base-image tag. `ENV` is **baked into the image and visible to the running container** — use it for runtime configuration.
 
 ```dockerfile
-ARG BUILD_VERSION=unknown       # only available during build
+# only available during build
+ARG BUILD_VERSION=unknown
 RUN echo $BUILD_VERSION > /app/version.txt
 
-ENV RUNTIME_VAR=value           # available to running container
+# available to running container
+ENV RUNTIME_VAR=value
 ```
 
 ```bash
@@ -48,7 +50,8 @@ Suppose a build step bakes the key into a config file:
 
 ```dockerfile
 ARG API_KEY
-RUN ./configure --key=$API_KEY    # writes the key into /app/config.json
+# writes the key into /app/config.json
+RUN ./configure --key=$API_KEY
 ```
 
 Anyone with the image can read it straight back out of that layer — no build args or history needed:
